@@ -116,38 +116,12 @@ func query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := make(ResultList)
-	var mux sync.Mutex
-	var wg sync.WaitGroup
-	// Process queries
-	for k, f := range queries {
-		wg.Add(1)
-		go func(
-			ctx context.Context,
-			begin, end time.Time,
-			k string,
-			f QueryFunction,
-		) {
-			defer wg.Done()
-			defer startTimer(k)()
-
-			res, err := f(ctx, begin, end)
-			if err != nil {
-				log.Printf(
-					"Query %s failed with error %s\n",
-					k,
-					err.Error(),
-				)
-			}
-			// Gather results
-			for i, w := range res {
-				mux.Lock()
-				result[i] = w
-				mux.Unlock()
-			}
-		}(ctx, begin, end, k, f)
+	// Gather results
+	for e := range runQueries(ctx, begin, end, genQueries(queries)) {
+		result = result.Append(e)
 	}
+
 	// Display results
-	wg.Wait()
 	_, err = io.WriteString(w, fmt.Sprintf("%# v", result))
 	if err != nil {
 		log.Println(err)
