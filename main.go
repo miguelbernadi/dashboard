@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/miguelbernadi/dashboard/provider"
+	"github.com/miguelbernadi/dashboard/provider/fakeprovider"
 )
 
 func startTimer(name string) func() {
@@ -19,43 +22,19 @@ func startTimer(name string) func() {
 	}
 }
 
-// ResultList is a list of query results
-type ResultList map[string]interface{}
-
-func (r ResultList) Append(s ResultList) ResultList {
-	for k, v := range s {
-		r[k] = v
-	}
-	return r
-}
-
-// QueryFunction is a function performing a query
-type QueryFunction func(
-	ctx context.Context, date1, date2 time.Time,
-) (ResultList, error)
-
-// QueryList represents a list of QueryFunctions
-type QueryList map[string]QueryFunction
-
 // QueryInput is a structure for query processing
 type QueryInput struct {
 	k string
-	f QueryFunction
+	f provider.QueryFunction
 }
 
-// Provider must be satisfied by data providers
-type Provider interface {
-	Login() error
-	Register() (QueryList, error)
+var providers = []provider.Provider{
+	fakeprovider.FakeProvider{},
 }
 
-var providers = []Provider{
-	FakeProvider{},
-}
+var queries provider.QueryList
 
-var queries QueryList
-
-func genQueries(list QueryList) <-chan QueryInput {
+func genQueries(list provider.QueryList) <-chan QueryInput {
 	out := make(chan QueryInput)
 	go func() {
 		for k, f := range list {
@@ -70,8 +49,8 @@ func runQueries(
 	ctx context.Context,
 	begin, end time.Time,
 	in <-chan QueryInput,
-) <-chan ResultList {
-	out := make(chan ResultList)
+) <-chan provider.ResultList {
+	out := make(chan provider.ResultList)
 	var wg sync.WaitGroup
 	for q := range in {
 		wg.Add(1)
@@ -115,7 +94,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	result := make(ResultList)
+	result := make(provider.ResultList)
 	// Gather results
 	for e := range runQueries(ctx, begin, end, genQueries(queries)) {
 		result = result.Append(e)
@@ -141,7 +120,7 @@ func main() {
 	}
 
 	stop := startTimer("Login to Data Providers")
-	queries = make(QueryList)
+	queries = make(provider.QueryList)
 	// Log into data providers
 	for _, provider := range providers {
 		err := provider.Login()

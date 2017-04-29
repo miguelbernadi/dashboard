@@ -1,8 +1,10 @@
-package main
+package fakeprovider
 
 import (
 	"context"
 	"time"
+
+	"github.com/miguelbernadi/dashboard/provider"
 )
 
 // FakeProvider is a fake data provider to test the server
@@ -14,16 +16,16 @@ func (p FakeProvider) Login() error {
 }
 
 // Register returns function map with bogus data
-func (p FakeProvider) Register() (QueryList, error) {
-	funcs := QueryList{
+func (p FakeProvider) Register() (provider.QueryList, error) {
+	funcs := provider.QueryList{
 		"Name": func(
 			ctx context.Context,
 			date1, date2 time.Time,
 		) (
-			ResultList,
+			provider.ResultList,
 			error,
 		) {
-			result := ResultList{
+			result := provider.ResultList{
 				"Name": "Hydra",
 			}
 			return result, nil
@@ -32,10 +34,10 @@ func (p FakeProvider) Register() (QueryList, error) {
 			ctx context.Context,
 			date1, date2 time.Time,
 		) (
-			ResultList,
+			provider.ResultList,
 			error,
 		) {
-			result := ResultList{
+			result := provider.ResultList{
 				"Heads": 8,
 			}
 			return result, nil
