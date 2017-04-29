@@ -14,21 +14,8 @@ func (p FakeProvider) Login() error {
 }
 
 // Register returns function map with bogus data
-func (p FakeProvider) Register() (
-	map[string]func(
-		ctx context.Context,
-		date1, date2 time.Time,
-	) (
-		map[string]interface{}, error,
-	),
-	error) {
-
-	funcs := map[string]func(
-		ctx context.Context,
-		date1, date2 time.Time,
-	) (
-		map[string]interface{}, error,
-	){
+func (p FakeProvider) Register() (QueryList, error) {
+	funcs := QueryList{
 		"Name": func(
 			ctx context.Context,
 			date1, date2 time.Time,

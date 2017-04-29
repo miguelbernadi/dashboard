@@ -15,24 +15,25 @@ func timeTrack(start time.Time, name string) {
 	log.Printf("%s took %s", name, elapsed)
 }
 
+// QueryFunction is a function performing a query
+type QueryFunction func(
+	ctx context.Context, date1, date2 time.Time,
+) (map[string]interface{}, error)
+
+// QueryList represents a list of QueryFunctions
+type QueryList map[string]QueryFunction
+
 // Provider must be satisfied by data providers
 type Provider interface {
 	Login() error
-	Register() (
-		map[string]func(
-			ctx context.Context,
-			date1, date2 time.Time,
-		) (
-			map[string]interface{}, error,
-		),
-		error,
-	)
+	Register() (QueryList, error)
 }
 
 var providers = []Provider{
 	FakeProvider{},
 }
-var queries map[string]func(ctx context.Context, date1, date2 time.Time) (map[string]interface{}, error)
+
+var queries QueryList
 
 func query(w http.ResponseWriter, r *http.Request) {
 	defer timeTrack(time.Now(), "search")
@@ -61,18 +62,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 			ctx context.Context,
 			begin, end time.Time,
 			k string,
-			f func(
-				ctx context.Context,
-				date1, date2 time.Time,
-			) (
-				map[string]interface{},
-				error,
-			),
+			f QueryFunction,
 		) {
 			defer wg.Done()
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
 			log.Println("Starting", k)
 			res, err := f(ctx, begin, end)
 			if err != nil {
@@ -111,7 +103,7 @@ func main() {
 		Addr: ":8080",
 	}
 
-	queries = make(map[string]func(ctx context.Context, date1, date2 time.Time) (map[string]interface{}, error))
+	queries = make(QueryList)
 	// Log into data providers
 	for _, provider := range providers {
 		err := provider.Login()
