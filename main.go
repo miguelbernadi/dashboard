@@ -15,10 +15,13 @@ func timeTrack(start time.Time, name string) {
 	log.Printf("%s took %s", name, elapsed)
 }
 
+// ResultList is a list of query results
+type ResultList map[string]interface{}
+
 // QueryFunction is a function performing a query
 type QueryFunction func(
 	ctx context.Context, date1, date2 time.Time,
-) (map[string]interface{}, error)
+) (ResultList, error)
 
 // QueryList represents a list of QueryFunctions
 type QueryList map[string]QueryFunction
@@ -52,7 +55,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	result := make(map[string]interface{})
+	result := make(ResultList)
 	var mux sync.Mutex
 	var wg sync.WaitGroup
 	// Process queries

@@ -20,10 +20,10 @@ func (p FakeProvider) Register() (QueryList, error) {
 			ctx context.Context,
 			date1, date2 time.Time,
 		) (
-			map[string]interface{},
+			ResultList,
 			error,
 		) {
-			result := map[string]interface{}{
+			result := ResultList{
 				"Name": "Hydra",
 			}
 			return result, nil
@@ -32,10 +32,10 @@ func (p FakeProvider) Register() (QueryList, error) {
 			ctx context.Context,
 			date1, date2 time.Time,
 		) (
-			map[string]interface{},
+			ResultList,
 			error,
 		) {
-			result := map[string]interface{}{
+			result := ResultList{
 				"Heads": 8,
 			}
 			return result, nil
