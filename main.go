@@ -22,6 +22,13 @@ func startTimer(name string) func() {
 // ResultList is a list of query results
 type ResultList map[string]interface{}
 
+func (r ResultList) Append(s ResultList) ResultList {
+	for k, v := range s {
+		r[k] = v
+	}
+	return r
+}
+
 // QueryFunction is a function performing a query
 type QueryFunction func(
 	ctx context.Context, date1, date2 time.Time,
@@ -29,6 +36,12 @@ type QueryFunction func(
 
 // QueryList represents a list of QueryFunctions
 type QueryList map[string]QueryFunction
+
+// QueryInput is a structure for query processing
+type QueryInput struct {
+	k string
+	f QueryFunction
+}
 
 // Provider must be satisfied by data providers
 type Provider interface {
@@ -41,6 +54,48 @@ var providers = []Provider{
 }
 
 var queries QueryList
+
+func genQueries(list QueryList) <-chan QueryInput {
+	out := make(chan QueryInput)
+	go func() {
+		for k, f := range list {
+			out <- QueryInput{k, f}
+		}
+		close(out)
+	}()
+	return out
+}
+
+func runQueries(
+	ctx context.Context,
+	begin, end time.Time,
+	in <-chan QueryInput,
+) <-chan ResultList {
+	out := make(chan ResultList)
+	var wg sync.WaitGroup
+	for q := range in {
+		wg.Add(1)
+		go func(q QueryInput) {
+			stop := startTimer(q.k)
+			res, err := q.f(ctx, begin, end)
+			if err != nil {
+				log.Printf(
+					"Query %s failed with error %s\n",
+					q.k,
+					err.Error(),
+				)
+			}
+			out <- res
+			wg.Done()
+			stop()
+		}(q)
+	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
 
 func query(w http.ResponseWriter, r *http.Request) {
 	defer startTimer("search")()
