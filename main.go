@@ -10,9 +10,13 @@ import (
 	"time"
 )
 
-func timeTrack(start time.Time, name string) {
-	elapsed := time.Since(start)
-	log.Printf("%s took %s", name, elapsed)
+func startTimer(name string) func() {
+	t := time.Now()
+	log.Println(name, "started")
+	return func() {
+		d := time.Now().Sub(t)
+		log.Println(name, "took", d)
+	}
 }
 
 // ResultList is a list of query results
@@ -39,7 +43,8 @@ var providers = []Provider{
 var queries QueryList
 
 func query(w http.ResponseWriter, r *http.Request) {
-	defer timeTrack(time.Now(), "search")
+	defer startTimer("search")()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -68,7 +73,8 @@ func query(w http.ResponseWriter, r *http.Request) {
 			f QueryFunction,
 		) {
 			defer wg.Done()
-			log.Println("Starting", k)
+			defer startTimer(k)()
+
 			res, err := f(ctx, begin, end)
 			if err != nil {
 				log.Printf(
@@ -83,7 +89,6 @@ func query(w http.ResponseWriter, r *http.Request) {
 				result[i] = w
 				mux.Unlock()
 			}
-			log.Println("Finished", k)
 		}(ctx, begin, end, k, f)
 	}
 	// Display results
@@ -106,6 +111,7 @@ func main() {
 		Addr: ":8080",
 	}
 
+	stop := startTimer("Login to Data Providers")
 	queries = make(QueryList)
 	// Log into data providers
 	for _, provider := range providers {
@@ -121,6 +127,7 @@ func main() {
 			queries[k] = f
 		}
 	}
+	stop()
 
 	log.Println("Starting server on port 8080")
 	http.HandleFunc("/", welcome)
