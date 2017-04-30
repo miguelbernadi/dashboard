@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/miguelbernadi/dashboard/daterange"
 	"github.com/miguelbernadi/dashboard/provider"
 	"github.com/miguelbernadi/dashboard/provider/fakeprovider"
 )
@@ -47,16 +48,21 @@ func genQueries(list provider.QueryList) <-chan QueryInput {
 
 func runQueries(
 	ctx context.Context,
-	begin, end time.Time,
 	in <-chan QueryInput,
 ) <-chan provider.ResultList {
 	out := make(chan provider.ResultList)
 	var wg sync.WaitGroup
+	t, ok := daterange.FromContext(ctx)
+	if !ok {
+		log.Println("No dates present in context. Aborting.")
+		close(out)
+		return out
+	}
 	for q := range in {
 		wg.Add(1)
 		go func(q QueryInput) {
 			stop := startTimer(q.k)
-			res, err := q.f(ctx, begin, end)
+			res, err := q.f(ctx, t.Begin, t.End)
 			if err != nil {
 				log.Printf(
 					"Query %s failed with error %s\n",
@@ -83,20 +89,15 @@ func query(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	// Parameter parsing
-	begin, err := time.Parse("20060102", r.FormValue("begin"))
+	ctx, err := daterange.NewContextFromRequest(ctx, r)
 	if err != nil {
-		log.Println("Error parsing begin time.", err.Error())
-		cancel()
-	}
-	end, err := time.Parse("20060102", r.FormValue("end"))
-	if err != nil {
-		log.Println("Error parsing end time.", err.Error())
+		log.Println(err)
 		cancel()
 	}
 
 	result := make(provider.ResultList)
 	// Gather results
-	for e := range runQueries(ctx, begin, end, genQueries(queries)) {
+	for e := range runQueries(ctx, genQueries(queries)) {
 		result = result.Append(e)
 	}
 
@@ -104,6 +105,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 	_, err = io.WriteString(w, fmt.Sprintf("%# v", result))
 	if err != nil {
 		log.Println(err)
+		cancel()
 	}
 }
 
