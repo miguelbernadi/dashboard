@@ -39,7 +39,13 @@ func genQueries(ctx context.Context, list provider.QueryList) <-chan QueryInput 
 	out := make(chan QueryInput)
 	go func() {
 		for k, f := range list {
-			out <- QueryInput{k, f}
+			select {
+			case <-ctx.Done():
+				log.Println("genQueries was cancelled")
+				close(out)
+				return
+			case out <- QueryInput{k, f}:
+			}
 		}
 		close(out)
 	}()
@@ -92,7 +98,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 	ctx, err := daterange.NewContextFromRequest(ctx, r)
 	if err != nil {
 		log.Println(err)
-		cancel()
+		return
 	}
 
 	// Gather results
@@ -105,7 +111,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 	_, err = io.WriteString(w, fmt.Sprintf("%# v", result))
 	if err != nil {
 		log.Println(err)
-		cancel()
+		return
 	}
 }
 
