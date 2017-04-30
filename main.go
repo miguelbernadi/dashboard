@@ -35,7 +35,7 @@ var providers = []provider.Provider{
 
 var queries provider.QueryList
 
-func genQueries(list provider.QueryList) <-chan QueryInput {
+func genQueries(ctx context.Context, list provider.QueryList) <-chan QueryInput {
 	out := make(chan QueryInput)
 	go func() {
 		for k, f := range list {
@@ -95,9 +95,9 @@ func query(w http.ResponseWriter, r *http.Request) {
 		cancel()
 	}
 
-	result := make(provider.ResultList)
 	// Gather results
-	for e := range runQueries(ctx, genQueries(queries)) {
+	result := make(provider.ResultList)
+	for e := range runQueries(ctx, genQueries(ctx, queries)) {
 		result = result.Append(e)
 	}
 
