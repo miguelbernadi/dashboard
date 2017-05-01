@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -97,6 +98,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 	// Parameter parsing
 	ctx, err := daterange.NewContextFromRequest(ctx, r)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Println(err)
 		return
 	}
@@ -108,10 +110,26 @@ func query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Display results
-	_, err = io.WriteString(w, fmt.Sprintf("%# v", result))
-	if err != nil {
-		log.Println(err)
-		return
+	if r.FormValue("json") == "true" {
+		w.Header().Set("Content-Type", "application/json")
+		message, err := json.Marshal(result)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+		_, err = io.WriteString(w, string(message))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+	} else {
+		_, err = io.WriteString(w, fmt.Sprintf("%# v", result))
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 }
 
