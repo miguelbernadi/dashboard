@@ -59,33 +59,38 @@ func runQueries(
 ) <-chan provider.ResultList {
 	out := make(chan provider.ResultList)
 	var wg sync.WaitGroup
+	wg.Add(1)
+
 	t, ok := daterange.FromContext(ctx)
 	if !ok {
 		log.Println("No dates present in context. Aborting.")
 		close(out)
 		return out
 	}
-	for q := range in {
-		wg.Add(1)
-		go func(q QueryInput) {
-			stop := startTimer(q.k)
-			res, err := q.f(ctx, t.Begin, t.End)
-			if err != nil {
-				log.Printf(
-					"Query %s failed with error %s\n",
-					q.k,
-					err.Error(),
-				)
-			}
-			out <- res
-			wg.Done()
-			stop()
-		}(q)
-	}
+	go func() {
+		for q := range in {
+			wg.Add(1)
+			go func(q QueryInput) {
+				stop := startTimer(q.k)
+				res, err := q.f(ctx, t.Begin, t.End)
+				if err != nil {
+					log.Printf(
+						"Query %s failed with error %s\n",
+						q.k,
+						err.Error(),
+					)
+				}
+				out <- res
+				wg.Done()
+				stop()
+			}(q)
+		}
+	}()
 	go func() {
 		wg.Wait()
 		close(out)
 	}()
+	wg.Done()
 	return out
 }
 
