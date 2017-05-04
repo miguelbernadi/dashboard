@@ -11,22 +11,27 @@ import (
 
 type key int
 
+// DateRangeKey the key
 const DateRangeKey key = 0
 
+// DateRange represents a range between 2 dates
 type DateRange struct {
 	Begin, End time.Time
 }
 
+// NewContext creates a context containing a DateRange
 func NewContext(ctx context.Context, date DateRange) context.Context {
 	return context.WithValue(ctx, DateRangeKey, date)
 }
 
+// FromContext extracts a DateRange from a context
 func FromContext(ctx context.Context) (DateRange, bool) {
 	// type assertion, ok=false if assertion fails
 	t, ok := ctx.Value(DateRangeKey).(DateRange)
 	return t, ok
 }
 
+// FromRequest Create a DateRange from Request
 func FromRequest(r *http.Request) (date DateRange, err error) {
 	v := struct {
 		Begin int64
@@ -50,7 +55,15 @@ func FromRequest(r *http.Request) (date DateRange, err error) {
 	return
 }
 
-func NewContextFromRequest(ctx context.Context, r *http.Request) (res context.Context, err error) {
+// NewContextFromRequest creates a Context containing the DateRange
+// specified in the Request
+func NewContextFromRequest(
+	ctx context.Context,
+	r *http.Request,
+) (
+	res context.Context,
+	err error,
+) {
 	date, err := FromRequest(r)
 	if err != nil {
 		return
