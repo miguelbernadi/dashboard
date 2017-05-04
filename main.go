@@ -100,6 +100,11 @@ func query(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	if r.Method != "POST" {
+		http.Error(w, "Operation not supported", http.StatusBadRequest)
+		return
+	}
+
 	// Parameter parsing
 	ctx, err := daterange.NewContextFromRequest(ctx, r)
 	if err != nil {
@@ -115,7 +120,7 @@ func query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Display results
-	if r.FormValue("json") == "true" {
+	if r.Header.Get("Accept") == "application/json" {
 		w.Header().Set("Content-Type", "application/json")
 		message, err := json.Marshal(result)
 		if err != nil {
