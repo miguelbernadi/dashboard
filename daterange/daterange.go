@@ -3,7 +3,6 @@ package daterange
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,8 +29,8 @@ func FromContext(ctx context.Context) (DateRange, bool) {
 
 func FromRequest(r *http.Request) (date DateRange, err error) {
 	v := struct {
-		Begin string
-		End   string
+		Begin int64
+		End   int64
 	}{}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -44,16 +43,9 @@ func FromRequest(r *http.Request) (date DateRange, err error) {
 		return
 	}
 
-	begin, err := time.Parse("20060102", v.Begin)
-	if err != nil {
-		err = fmt.Errorf("Error parsing begin time. %s\n", err.Error())
-		return
-	}
-	end, err := time.Parse("20060102", v.End)
-	if err != nil {
-		err = fmt.Errorf("Error parsing end time. %s\n", err.Error())
-		return
-	}
+	begin := time.Unix(v.Begin, 0)
+	end := time.Unix(v.End, 0)
+
 	date = DateRange{begin, end}
 	return
 }
