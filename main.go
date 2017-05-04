@@ -12,7 +12,7 @@ import (
 
 	"github.com/miguelbernadi/dashboard/daterange"
 	"github.com/miguelbernadi/dashboard/provider"
-	"github.com/miguelbernadi/dashboard/provider/fakeprovider"
+	"github.com/miguelbernadi/dashboard/provider/postgresprovider"
 )
 
 func startTimer(name string) func() {
@@ -30,9 +30,7 @@ type QueryInput struct {
 	f provider.QueryFunction
 }
 
-var providers = []provider.Provider{
-	fakeprovider.FakeProvider{},
-}
+var providers []provider.Provider
 
 var queries provider.QueryList
 
@@ -148,6 +146,13 @@ func main() {
 		Addr: ":8080",
 	}
 
+	postgres, err := postgresprovider.Setup(
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	providers = append(providers, postgres)
+
 	stop := startTimer("Login to Data Providers")
 	queries = make(provider.QueryList)
 	// Log into data providers
@@ -173,7 +178,7 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/search", query)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
