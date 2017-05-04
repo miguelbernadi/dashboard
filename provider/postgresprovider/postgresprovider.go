@@ -81,6 +81,7 @@ func (p PostgresProvider) genericQuery(
 	}
 	rows, err := p.db.QueryContext(ctx, query)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	defer func() {
@@ -104,6 +105,26 @@ func (p PostgresProvider) genericQuery(
 	return
 }
 
+func (p PostgresProvider) queryHelper(
+	ctx context.Context,
+	query, name string,
+) (
+	list provider.ResultList,
+	err error,
+) {
+	value, err := p.genericQuery(
+		ctx,
+		query,
+	)
+	if err != nil {
+		err = fmt.Errorf("postgresprovider.%sQuery: %s\n", name, err.Error())
+		return
+	}
+	list = provider.ResultList{name: value}
+	return
+}
+
+// Example
 func (p PostgresProvider) simpleQuery() provider.QueryFunction {
 	return func(
 		ctx context.Context,
@@ -112,24 +133,15 @@ func (p PostgresProvider) simpleQuery() provider.QueryFunction {
 		list provider.ResultList,
 		err error,
 	) {
+		name := "simpleQuery"
 		query := fmt.Sprintf(
 			`SELECT COUNT(*)
 	                   FROM articles
 		          WHERE updated_at > %s
 		            AND updated_at < %s`,
-			//'2017-04-29 00:00:00'::TIMESTAMP
-			fmt.Sprintf("'%s'::TIMESTAMP", begin.Format("2006-01-02 15:04:05")),
-			fmt.Sprintf("'%s'::TIMESTAMP", end.Format("2006-01-02 15:04:05")),
+			fmt.Sprintf("'%s'", begin.Format("2006-01-02")),
+			fmt.Sprintf("'%s'", end.Format("2006-01-02")),
 		)
-		value, err := p.genericQuery(
-			ctx,
-			query,
-		)
-		if err != nil {
-			err = fmt.Errorf("postgresprovider.simpleQuery: %s\n", err.Error())
-			return
-		}
-		list = provider.ResultList{"simpleQueryValue": value}
-		return
+		return p.queryHelper(ctx, query, name)
 	}
 }
