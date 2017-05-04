@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	// Use postgresql lib
@@ -77,7 +78,7 @@ func (p PostgresProvider) genericQuery(
 ) {
 	var result int
 	if p.db == nil {
-		log.Fatal("BLAH!")
+		log.Fatal("Database connection is null pointer")
 	}
 	rows, err := p.db.QueryContext(ctx, query)
 	if err != nil {
@@ -120,7 +121,7 @@ func (p PostgresProvider) queryHelper(
 		err = fmt.Errorf("postgresprovider.%sQuery: %s\n", name, err.Error())
 		return
 	}
-	list = provider.ResultList{name: value}
+	list = provider.ResultList{cleanKey(name): value}
 	return
 }
 
@@ -144,4 +145,8 @@ func (p PostgresProvider) simpleQuery() provider.QueryFunction {
 		)
 		return p.queryHelper(ctx, query, name)
 	}
+}
+
+func cleanKey(s string) string {
+	return strings.Join(strings.Fields(strings.ToLower(s)), "_")
 }
