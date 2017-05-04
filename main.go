@@ -138,13 +138,6 @@ func query(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func welcome(w http.ResponseWriter, r *http.Request) {
-	_, err := io.WriteString(w, "Hello World!")
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
 func main() {
 	server := http.Server{
 		Addr: ":8080",
@@ -168,8 +161,11 @@ func main() {
 	}
 	stop()
 
+	// Serve static files
+	fs := http.FileServer(http.Dir("static"))
+
 	log.Println("Starting server on port 8080")
-	http.HandleFunc("/", welcome)
+	http.Handle("/", fs)
 	http.HandleFunc("/search", query)
 
 	err := server.ListenAndServe()
