@@ -167,7 +167,7 @@ func main() {
 	stop()
 
 	// Serve static files
-	fs := http.FileServer(http.Dir("static"))
+	fs := http.FileServer(http.Dir("dist"))
 
 	log.Println("Starting server on port 8080")
 	http.Handle("/", fs)
