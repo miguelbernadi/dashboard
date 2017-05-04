@@ -95,7 +95,7 @@ func runQueries(
 func query(w http.ResponseWriter, r *http.Request) {
 	defer startTimer("search")()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
 	if r.Method != "POST" {
